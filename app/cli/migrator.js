@@ -5,13 +5,11 @@ import { neon, neonConfig } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { migrate } from "drizzle-orm/neon-http/migrator";
 
-import { schema } from "../lib/schema";
-
 import ws from "ws";
 
 neonConfig.webSocketConstructor = ws;
 const sql = neon(process.env.DATABASE_URL);
-export const db = drizzle(sql, { schema });
+export const db = drizzle({ client: sql });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
