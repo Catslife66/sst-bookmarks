@@ -1,10 +1,11 @@
-import { migrate } from "drizzle-orm/neon-http/migrator";
-import { neon, neonConfig } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import "dotenv/config";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { neon, neonConfig } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import { migrate } from "drizzle-orm/neon-http/migrator";
+
 import { schema } from "../lib/schema";
-import "dotenv/config";
 
 import ws from "ws";
 
@@ -17,15 +18,12 @@ const __dirname = path.dirname(__filename);
 const migrationsFolder = path.join(__dirname, "drizzle");
 
 async function performMigrate() {
-  try {
-    console.log("Running migrations from:", migrationsFolder);
-    await migrate(db, { migrationsFolder });
-    console.log("Migrations completed");
-    process.exit(0);
-  } catch (err) {
-    console.error("Migration failed:", err);
-    process.exit(1);
-  }
+  console.log("Running migrations from:", migrationsFolder);
+  await migrate(db, { migrationsFolder });
+  console.log("Migrations completed");
 }
 
-performMigrate();
+performMigrate().catch((err) => {
+  console.error("Migration failed:", err);
+  process.exit(1);
+});
