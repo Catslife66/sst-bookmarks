@@ -3,12 +3,13 @@ import { neon, neonConfig } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { Resource } from "sst";
 import "dotenv/config";
 
 import ws from "ws";
 
 neonConfig.webSocketConstructor = ws;
-const sql = neon(process.env.DATABASE_URL);
+const sql = neon(Resource.DATABASE_URL.value);
 export const db = drizzle({ client: sql });
 
 const __filename = fileURLToPath(import.meta.url);
