@@ -42,7 +42,7 @@ jobs:
           npx sst secret set GITHUB_CLIENT_SECRET "${{secrets.AUTH_CLIENT_SECRET}}" --stage production
 
       - name: Migrate Drizzle database
-        run: npx tsx app/cli/migrator.js
+        run: node app/cli/migrator.js
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
