@@ -1,8 +1,30 @@
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool, neonConfig } from "@neondatabase/serverless";
-import { schema } from "../lib/schema";
+import { migrate } from "drizzle-orm/neon-http/migrator";
+import { neon, neonConfig } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import "dotenv/config";
 
 import ws from "ws";
 
-async function performMigrate() {}
+neonConfig.webSocketConstructor = ws;
+const sql = neon(process.env.DATABASE_URL);
+export const db = drizzle({ client: sql });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const migrationsFolder = path.join(__dirname, "drizzle");
+
+async function performMigrate() {
+  try {
+    console.log("Running migrations from:", migrationsFolder);
+    await migrate(db, { migrationsFolder });
+    console.log("Migrations completed");
+    process.exit(0);
+  } catch (err) {
+    console.error("Migration failed:", err);
+    process.exit(1);
+  }
+}
+
+performMigrate();
