@@ -29,16 +29,12 @@ async function performMigration() {
   await pool.end();
 }
 
-if (require.main === module) {
-  console.log("Running migrations");
-
-  performMigration()
-    .then((val) => {
-      console.log("Migration performed");
-      process.exit(0);
-    })
-    .catch((err) => {
-      console.log("err", err);
-      process.exit(1);
-    });
-}
+performMigration()
+  .then((val) => {
+    console.log("Migration performed");
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.log("err", err);
+    process.exit(1);
+  });
