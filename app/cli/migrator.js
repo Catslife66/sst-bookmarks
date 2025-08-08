@@ -1,27 +1,44 @@
 import "dotenv/config";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { neon, neonConfig } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
-import { migrate } from "drizzle-orm/neon-http/migrator";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import { schema } from "../lib/schema";
 
 import ws from "ws";
 
-neonConfig.webSocketConstructor = ws;
-const sql = neon(process.env.DATABASE_URL);
-export const db = drizzle({ client: sql });
+async function performMigration() {
+  neonConfig.webSocketConstructor = ws;
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const migrationsFolder = path.join(__dirname, "drizzle");
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  pool.on("error", (err) => console.error(err));
 
-async function performMigrate() {
-  console.log("Running migrations from:", migrationsFolder);
-  await migrate(db, { migrationsFolder });
-  console.log("Migrations completed");
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    const db = await drizzle(client, { schema });
+    await migrate(db, { migrationsFolder: "drizzle" });
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  await pool.end();
 }
 
-performMigrate().catch((err) => {
-  console.error("Migration failed:", err);
-  process.exit(1);
-});
+if (require.main === module) {
+  console.log("Running migrations");
+
+  performMigration()
+    .then((val) => {
+      console.log("Migration performed");
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.log("err", err);
+      process.exit(1);
+    });
+}
