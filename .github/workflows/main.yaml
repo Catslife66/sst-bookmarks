@@ -1,59 +1,61 @@
-# name: Deploy to AWS via SST
+name: Deploy to AWS via SST
 
-# on:
-#   workflow_dispatch:
-#   push:
-#     branches: [main]
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
 
-# jobs:
-#   build:
-runs-on: ubuntu-latest
-steps:
-  - uses: actions/checkout@v4
-  - uses: actions/setup-node@v4
-    with:
-      node-version: "22.x"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
 
-  - name: Cache Next.js build
-    uses: actions/cache@v4
-    with:
-      path: |
-        .next
-        .open-next
-      key: |
-        cache-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
-      restore-keys: |
-        cache-${{ hashFiles('package-lock.json') }}-
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: |
+            .next
+            .open-next
+          key: |
+            cache-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          restore-keys: |
+            cache-${{ hashFiles('package-lock.json') }}-
 
-  - name: Install dependencies
-    run: npm install
+      - name: Install dependencies
+        run: npm install
 
-  - name: Install AWS credentials
-    run: |
-      mkdir -p ~/.aws
-      echo "[default]" > ~/.aws/credentials
-      echo "aws_access_key_id=${{secrets.AWS_ACCESS_KEY_ID}}" >> ~/.aws/credentials
-      echo "aws_secret_access_key=${{secrets.AWS_SECRET_ACCESS_KEY}}" >> ~/.aws/credentials
+      - name: Install AWS credentials
+        run: |
+          mkdir -p ~/.aws
+          echo "[production]" > ~/.aws/credentials
+          echo "aws_access_key_id=${{secrets.AWS_ACCESS_KEY_ID_PROD}}" >> ~/.aws/credentials
+          echo "aws_secret_access_key=${{secrets.AWS_SECRET_ACCESS_KEY_PROD}}" >> ~/.aws/credentials
 
-  - name: Set SST secrets
-    run: |
-      npx sst secret set DATABASE_URL "${{secrets.DATABASE_URL}}" --stage production
-      npx sst secret set AUTH_GITHUB_ID "${{secrets.AUTH_GITHUB_ID}}" --stage production
-      npx sst secret set AUTH_GITHUB_SECRET "${{secrets.AUTH_GITHUB_SECRET}}" --stage production
+      - name: Set SST secrets
+        run: |
+          npx sst secret set DATABASE_URL "${{secrets.DATABASE_URL}}" --stage production
+          npx sst secret set GITHUB_CLIENT_ID "${{secrets.AUTH_CLIENT_ID}}" --stage production
+          npx sst secret set GITHUB_CLIENT_SECRET "${{secrets.AUTH_CLIENT_SECRET}}" --stage production
 
-  - name: Migrate Prisma database
-    run: npx prisma generate
+      - name: Migrate Drizzle database
+        run: |
+          npx drizzle-kit generate
+          npx drizzle-kit migrate
 
-  - name: Deploy to AWS
-    run: npx sst deploy --stage production
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      AUTH_GITHUB_ID: ${{ secrets.AUTH_GITHUB_ID }}
-      AUTH_GITHUB_SECRET: ${{ secrets.AUTH_GITHUB_SECRET }}
+      - name: Deploy to AWS
+        run: npx sst deploy --stage production
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GITHUB_CLIENT_ID: ${{ secrets.AUTH_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET: ${{ secrets.AUTH_CLIENT_SECRET }}
 
-  - name: Clean Up AWS Profile
-    run: |
-      rm -rf ~/.aws
+      - name: Clean Up AWS Profile
+        run: |
+          rm -rf ~/.aws
